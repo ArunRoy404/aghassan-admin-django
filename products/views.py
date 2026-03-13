@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from psd_tools import PSDImage
+import base64
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
@@ -17,9 +18,29 @@ class ProductListAPI(generics.ListAPIView):
     queryset = Product.objects.all().order_by('-created_at')
     serializer_class = ProductSerializer
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return Response({
+            "success": True,
+            "message": "Products retrieved successfully",
+            "error": None,
+            "status": 200,
+            "data": response.data
+        })
+
 class ProductDetailAPI(generics.RetrieveAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        return Response({
+            "success": True,
+            "message": "Product retrieved successfully",
+            "error": None,
+            "status": 200,
+            "data": response.data
+        })
 
 class GenerateMockupAPI(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -106,22 +127,42 @@ class GenerateMockupAPI(APIView):
         
         image_file = request.FILES.get('image')
         if not image_file:
-            return Response({"error": "No image provided"}, status=400)
+            return Response({
+                "success": False,
+                "message": "No image provided",
+                "error": "Image file is missing in the request",
+                "status": 400
+            }, status=400)
             
         product_psd = product.psd_files.first()
         if not product_psd:
-            return Response({"error": "No PSD attached to this product"}, status=400)
+            return Response({
+                "success": False,
+                "message": "PSD missing",
+                "error": "No PSD attached to this product",
+                "status": 400
+            }, status=400)
             
         psd_path = product_psd.psd_file.path
         psd_json = product_psd.structure_json
         
         if not psd_json:
-            return Response({"error": "Structure JSON missing for the PSD file"}, status=400)
+            return Response({
+                "success": False,
+                "message": "Structure missing",
+                "error": "Structure JSON missing for the PSD file",
+                "status": 400
+            }, status=400)
             
         img_array = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
         if img is None:
-            return Response({"error": "Invalid image format"}, status=400)
+            return Response({
+                "success": False,
+                "message": "Invalid image",
+                "error": "The provided image format is not supported or corrupted",
+                "status": 400
+            }, status=400)
             
         if len(img.shape) > 2 and img.shape[2] == 3:
             user_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
@@ -156,12 +197,26 @@ class GenerateMockupAPI(APIView):
             from io import BytesIO
             response_io = BytesIO()
             final_image.save(response_io, format='PNG')
-            response_io.seek(0)
+            img_data = response_io.getvalue()
             
-            return HttpResponse(response_io, content_type='image/png')
+            base64_img = base64.b64encode(img_data).decode('utf-8')
+            preview_url = f"data:image/png;base64,{base64_img}"
+            
+            return Response({
+                "success": True,
+                "message": "Mockup generated successfully",
+                "error": None,
+                "status": 200,
+                "preview": preview_url
+            })
             
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({
+                "success": False,
+                "message": "Failed to generate mockup",
+                "error": str(e),
+                "status": 500
+            }, status=500)
 
 # Web Views
 @login_required
