@@ -134,23 +134,12 @@ class GenerateMockupAPI(APIView):
                 "status": 400
             }, status=400)
             
-        product_psd = product.psd_files.first()
-        if not product_psd:
+        product_psds = product.psd_files.all()
+        if not product_psds.exists():
             return Response({
                 "success": False,
                 "message": "PSD missing",
-                "error": "No PSD attached to this product",
-                "status": 400
-            }, status=400)
-            
-        psd_path = product_psd.psd_file.path
-        psd_json = product_psd.structure_json
-        
-        if not psd_json:
-            return Response({
-                "success": False,
-                "message": "Structure missing",
-                "error": "Structure JSON missing for the PSD file",
+                "error": "No PSD files attached to this product",
                 "status": 400
             }, status=400)
             
@@ -171,49 +160,57 @@ class GenerateMockupAPI(APIView):
         else:
             user_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGBA)
             
+        previews = []
         try:
-            psd_obj = PSDImage.open(psd_path)
-            canvas_w, canvas_h = psd_obj.width, psd_obj.height
-            final_image = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
-
-            layers_data = psd_json.get('children', [])
-            
-            for layer_data in layers_data:
-                name = layer_data.get('name', 'Unknown')
+            for product_psd in product_psds:
+                psd_path = product_psd.psd_file.path
+                psd_json = product_psd.structure_json
                 
-                if 'placedLayer' in layer_data:
-                    warped_arr = self.run_warp_math(canvas_w, canvas_h, layer_data, user_img)
-                    warped_pil = Image.fromarray(warped_arr)
-                    final_image.alpha_composite(warped_pil)
-                else:
-                    psd_layer_img = self.get_psd_layer_by_name(psd_obj, name)
-                    if psd_layer_img:
-                        layer_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0,0,0,0))
-                        left = layer_data.get('left', 0)
-                        top = layer_data.get('top', 0)
-                        layer_canvas.paste(psd_layer_img, (left, top))
-                        final_image.alpha_composite(layer_canvas)
-                        
-            from io import BytesIO
-            response_io = BytesIO()
-            final_image.save(response_io, format='PNG')
-            img_data = response_io.getvalue()
-            
-            base64_img = base64.b64encode(img_data).decode('utf-8')
-            preview_url = f"data:image/png;base64,{base64_img}"
+                if not psd_json:
+                    continue # Skip if no JSON structure
+                    
+                psd_obj = PSDImage.open(psd_path)
+                canvas_w, canvas_h = psd_obj.width, psd_obj.height
+                final_image = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+                layers_data = psd_json.get('children', [])
+                
+                for layer_data in layers_data:
+                    name = layer_data.get('name', 'Unknown')
+                    
+                    if 'placedLayer' in layer_data:
+                        warped_arr = self.run_warp_math(canvas_w, canvas_h, layer_data, user_img)
+                        warped_pil = Image.fromarray(warped_arr)
+                        final_image.alpha_composite(warped_pil)
+                    else:
+                        psd_layer_img = self.get_psd_layer_by_name(psd_obj, name)
+                        if psd_layer_img:
+                            layer_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0,0,0,0))
+                            left = layer_data.get('left', 0)
+                            top = layer_data.get('top', 0)
+                            layer_canvas.paste(psd_layer_img, (left, top))
+                            final_image.alpha_composite(layer_canvas)
+                
+                from io import BytesIO
+                response_io = BytesIO()
+                final_image.save(response_io, format='PNG')
+                img_data = response_io.getvalue()
+                
+                base64_img = base64.b64encode(img_data).decode('utf-8')
+                previews.append(f"data:image/png;base64,{base64_img}")
             
             return Response({
                 "success": True,
-                "message": "Mockup generated successfully",
+                "message": f"Successfully generated {len(previews)} mockup(s)",
                 "error": None,
                 "status": 200,
-                "preview": preview_url
+                "preview": previews
             })
             
         except Exception as e:
             return Response({
                 "success": False,
-                "message": "Failed to generate mockup",
+                "message": "Failed to generate mockups",
                 "error": str(e),
                 "status": 500
             }, status=500)
