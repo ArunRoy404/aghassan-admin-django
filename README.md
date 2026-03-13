@@ -39,6 +39,7 @@ If you are running this for the first time or restarting:
 - **Upload Product**: 
     - Add product name, description, and a thumbnail.
     - **PSD Support**: Specifically designed for Gift-khana, you can upload **multiple .psd files** for a single product (used for the customization tool).
+- **Delete Product**: Quick and simple UI action in the Products Inventory to completely remove products and their associated PSD files.
 
 ---
 
@@ -49,6 +50,7 @@ Integration for the Gift-khana frontend:
 | :--- | :--- | :--- |
 | `/products/api/products/` | `GET` | List all products with their thumbnails and PSD info. |
 | `/products/api/products/<id>/` | `GET` | Get full details for a single product. |
+| `/products/api/products/<id>/mockup/` | `POST` | Generates a warped mockup image mapped mathematically over the PSD template layer structure using an uploaded user `image` buffer. |
 
 ---
 
