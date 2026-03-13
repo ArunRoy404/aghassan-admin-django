@@ -1,60 +1,91 @@
 {% extends 'dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Upload Product - Admin Panel{% endblock %}
-{% block header %}Upload New Product{% endblock %}
+{% block title %}Upload - AGHASSAN Admin{% endblock %}
+{% block header %}Product Creator{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="name" class="form-label">Product Name</label>
-                            <input type="text" class="form-control" id="name" name="name"
-                                placeholder="e.g. Premium T-Shirt Mockup" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="thumbnail" class="form-label">Thumbnail Image</label>
-                            <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*"
-                                required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="4"
-                            placeholder="Enter product details..." required></textarea>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label d-flex justify-content-between align-items-center">
-                            PSD Files
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-psd-btn">+ Add Another
-                                PSD</button>
-                        </label>
-                        <div id="psd-slots-container">
-                            <!-- Slots will be added here -->
-                        </div>
-                    </div>
-
-                    <!-- Hidden input to store processed JSON data -->
-                    <input type="hidden" name="psd_data" id="psd_data">
-
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary px-5" id="submit-btn">Upload Product</button>
-                        <a href="{% url 'product_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
-                    </div>
-                </form>
+    <div class="col-xl-9 col-lg-11">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="fw-bold mb-0">Create New Product</h5>
+                <p class="text-muted small mb-0">Upload product information and source PSD files.</p>
             </div>
+        </div>
+
+        <div class="card shadow-sm border-0 p-3 p-md-4">
+            <form method="post" enctype="multipart/form-data" id="upload-form">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="mb-4">
+                            <label for="name"
+                                class="form-label fw-600 small text-uppercase tracking-wider text-muted">Product
+                                Name</label>
+                            <input type="text" class="form-control form-control-lg border-2" id="name" name="name"
+                                placeholder="Enter product title..." required
+                                style="font-size: 1rem; border-radius: 0.75rem;">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description"
+                                class="form-label fw-600 small text-uppercase tracking-wider text-muted">Description</label>
+                            <textarea class="form-control border-2" id="description" name="description" rows="5"
+                                placeholder="Write something about this product..." required
+                                style="border-radius: 0.75rem; resize: none;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="mb-4">
+                            <label for="thumbnail"
+                                class="form-label fw-600 small text-uppercase tracking-wider text-muted">Thumbnail
+                                Image</label>
+                            <div class="thumbnail-upload-container border-2 border-dashed rounded-4 p-4 text-center position-relative"
+                                id="thumb-drop-zone" style="background: #f8fafc; border-color: #cbd5e1 !important;">
+                                <input type="file"
+                                    class="position-absolute w-100 h-100 top-0 start-0 opacity-0 cursor-pointer"
+                                    id="thumbnail" name="thumbnail" accept="image/*" required>
+                                <div id="thumb-preview-placeholder">
+                                    <i class="bi bi-image text-muted opacity-50" style="font-size: 2.5rem;"></i>
+                                    <p class="small text-muted mb-0 mt-2">Click or drag banner image here</p>
+                                </div>
+                                <img id="thumb-preview" class="img-fluid rounded-3 d-none shadow-sm"
+                                    style="max-height: 200px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="psd-section mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">PSD Source Files</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="add-psd-btn">
+                            <i class="bi bi-plus-lg me-1"></i> Add Another Slot
+                        </button>
+                    </div>
+
+                    <div id="psd-slots-container">
+                        <!-- Slots will be added dynamically -->
+                    </div>
+                </div>
+
+                <input type="hidden" name="psd_data" id="psd_data">
+
+                <div class="pt-4 border-top mt-5 d-flex gap-3">
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-700" id="submit-btn"
+                        style="border-radius: 0.8rem;">
+                        <i class="bi bi-check2-circle me-2"></i> Publish Product
+                    </button>
+                    <a href="{% url 'product_list' %}" class="btn btn-light px-4 py-2 text-muted fw-600"
+                        style="border-radius: 0.8rem;">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- ag-psd library local -->
 <script src="{% static 'js/vendor/ag-psd.bundle.js' %}"></script>
 
 <script>
@@ -62,27 +93,51 @@
     const addPsdBtn = document.getElementById('add-psd-btn');
     const psdDataInput = document.getElementById('psd_data');
     const submitBtn = document.getElementById('submit-btn');
+    const thumbInput = document.getElementById('thumbnail');
+    const thumbPreview = document.getElementById('thumb-preview');
+    const thumbPlaceholder = document.getElementById('thumb-preview-placeholder');
 
-    // Store structures in an object keyed by slot ID
+    // Thumbnail Preview Handler
+    thumbInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                thumbPreview.src = re.target.result;
+                thumbPreview.classList.remove('d-none');
+                thumbPlaceholder.classList.add('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // PSD Logic
     const psdStructures = {};
 
     function createPsdSlot() {
         const slotId = 'slot-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const slot = document.createElement('div');
-        slot.className = 'psd-slot card mb-3 border-dashed';
+        slot.className = 'psd-slot card mb-3 border-0 bg-light-soft';
         slot.id = slotId;
+        slot.style.background = '#fefefe';
+        slot.style.border = '1px solid #e2e8f0 !important';
+        slot.style.borderRadius = '1rem';
+
         slot.innerHTML = `
             <div class="card-body p-3">
-                <div class="d-flex align-items-start gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="slot-number-badge">{{ forloop.counter }}</div>
                     <div class="flex-grow-1">
-                        <input type="file" class="form-control mb-1 psd-file-input" name="psd_files" accept=".psd" required>
-                        <div class="small text-muted status-text">Select a .psd file to process</div>
-                        <div class="progress mt-2 d-none slot-progress" style="height: 5px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        <input type="file" class="form-control psd-file-input border-0 bg-transparent fw-500" name="psd_files" accept=".psd" required>
+                        <div class="status-info d-flex align-items-center gap-2 mt-1">
+                             <div class="small text-muted status-text" style="font-size: 0.75rem;">Waiting for file...</div>
+                        </div>
+                        <div class="progress mt-2 d-none slot-progress" style="height: 4px; border-radius: 10px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-outline-danger btn-sm remove-slot-btn" title="Remove">
-                        <i class="bi bi-trash">&times;</i>
+                    <button type="button" class="btn btn-sm text-danger hover-bg-danger-soft p-2 border-0 opacity-75 remove-slot-btn" title="Remove Slot">
+                        <i class="bi bi-trash3 fs-6"></i>
                     </button>
                 </div>
             </div>
@@ -101,11 +156,11 @@
             progressBar.classList.remove('d-none');
             const bar = progressBar.querySelector('.progress-bar');
             bar.style.width = '20%';
-            statusText.innerText = `Processing ${file.name}...`;
+            statusText.innerText = `Analyzing ${file.name}...`;
 
             try {
                 const buffer = await file.arrayBuffer();
-                bar.style.width = '50%';
+                bar.style.width = '60%';
                 const psd = agPsd.readPsd(buffer);
 
                 const optimizedPsd = { ...psd };
@@ -115,14 +170,11 @@
                 psdStructures[slotId] = optimizedPsd;
 
                 bar.style.width = '100%';
-                bar.classList.remove('progress-bar-animated');
-                statusText.className = 'small text-success fw-bold';
-                statusText.innerText = `${file.name} processed successfully.`;
+                statusText.innerHTML = `<i class="bi bi-patch-check-fill text-success"></i> <span class="text-success fw-bold">${file.name} ready</span>`;
                 syncPsdData();
             } catch (err) {
                 console.error(`Error processing ${file.name}:`, err);
-                statusText.className = 'small text-danger';
-                statusText.innerText = `Error: Failed to parse ${file.name}`;
+                statusText.innerHTML = `<i class="bi bi-x-circle-fill text-danger"></i> <span class="text-danger">Failed to parse PSD</span>`;
                 delete psdStructures[slotId];
                 syncPsdData();
             }
@@ -130,10 +182,13 @@
         });
 
         removeBtn.addEventListener('click', () => {
-            slot.remove();
-            delete psdStructures[slotId];
-            syncPsdData();
-            updateSubmitButton();
+            slot.classList.add('opacity-0');
+            setTimeout(() => {
+                slot.remove();
+                delete psdStructures[slotId];
+                syncPsdData();
+                updateSubmitButton();
+            }, 200);
         });
 
         psdSlotsContainer.appendChild(slot);
@@ -141,8 +196,6 @@
     }
 
     function syncPsdData() {
-        // Because Django gets files in order of appearance in DOM, 
-        // we should sync the JSON array in the same DOM order.
         const results = [];
         const slots = psdSlotsContainer.querySelectorAll('.psd-slot');
         slots.forEach(slot => {
@@ -155,47 +208,61 @@
 
     function updateSubmitButton() {
         const slots = psdSlotsContainer.querySelectorAll('.psd-slot');
-        // Disable if no slots or any slot is missing a processed structure
         let allProcessed = slots.length > 0;
         slots.forEach(slot => {
-            if (!psdStructures[slot.id]) {
-                allProcessed = false;
-            }
+            if (!psdStructures[slot.id]) allProcessed = false;
         });
-        // We also want to disable if any slot is currently processing? 
-        // (Handled by the fact that if it's processing, psdStructures[id] isn't set yet)
         submitBtn.disabled = !allProcessed;
     }
 
-    addPsdBtn.addEventListener('click', () => {
-        createPsdSlot();
-        updateSubmitButton();
-    });
+    addPsdBtn.addEventListener('click', () => createPsdSlot());
 
-    // Initialize with one slot
+    // Initialize
     createPsdSlot();
     updateSubmitButton();
 </script>
 
 <style>
-    .border-dashed {
-        border-style: dashed !important;
-        border-width: 2px !important;
+    .fw-600 {
+        font-weight: 600;
+    }
+
+    .fw-700 {
+        font-weight: 700;
+    }
+
+    .tracking-wider {
+        letter-spacing: 0.05em;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .thumbnail-upload-container {
+        transition: all 0.2s ease;
+    }
+
+    .thumbnail-upload-container:hover {
+        background: #f1f5f9 !important;
+        border-color: #6366f1 !important;
+    }
+
+    .hover-bg-danger-soft:hover {
+        background: rgba(220, 53, 69, 0.1) !important;
+    }
+
+    .slot-number-badge {
+        width: 32px;
+        height: 32px;
+        background: #f1f5f9;
+        border-radius: 8px;
+        display: none;
+        /* Removed for now, can be counters if desired */
     }
 
     .psd-slot {
-        transition: all 0.2s;
-    }
-
-    .psd-slot:hover {
-        border-color: #0d6efd !important;
-        background-color: #f8f9fa;
-    }
-
-    .remove-slot-btn {
-        font-size: 1.2rem;
-        padding: 0 0.5rem;
-        line-height: 1;
+        transition: opacity 0.2s ease;
     }
 </style>
 {% endblock %}

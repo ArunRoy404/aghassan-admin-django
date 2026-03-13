@@ -1,38 +1,105 @@
 {% extends 'dashboard/base.html' %}
 
-{% block title %}Add User - Admin Panel{% endblock %}
-{% block header %}Create New User{% endblock %}
+{% block title %}Add User - AGHASSAN Admin{% endblock %}
+{% block header %}Create Account{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_staff" name="is_staff">
-                        <label class="form-check-label" for="is_staff">Set as Staff (Admin access)</label>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Create User</button>
-                        <a href="{% url 'home' %}" class="btn btn-light">Cancel</a>
-                    </div>
-                </form>
+    <div class="col-xl-5 col-lg-6 col-md-8">
+        <div class="row mb-4">
+            <div class="col-12 text-center text-md-start">
+                <h5 class="fw-bold mb-0">Create User Account</h5>
+                <p class="text-muted small mb-0">Provide credentials to register a new administrator or user.</p>
             </div>
+        </div>
+
+        <div class="card shadow-sm border-0 p-3 p-md-4">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label for="username"
+                        class="form-label fw-600 small text-uppercase tracking-wider text-muted">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-2 border-end-0 px-3"><i
+                                class="bi bi-person text-muted"></i></span>
+                        <input type="text" class="form-control form-control-lg border-2 border-start-0 ps-0"
+                            id="username" name="username" required
+                            style="font-size: 1rem; border-radius: 0 0.75rem 0.75rem 0;">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="email" class="form-label fw-600 small text-uppercase tracking-wider text-muted">Email
+                        Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-2 border-end-0 px-3"><i
+                                class="bi bi-envelope text-muted"></i></span>
+                        <input type="email" class="form-control form-control-lg border-2 border-start-0 ps-0" id="email"
+                            name="email" required style="font-size: 1rem; border-radius: 0 0.75rem 0.75rem 0;">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="password"
+                        class="form-label fw-600 small text-uppercase tracking-wider text-muted">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-2 border-end-0 px-3"><i
+                                class="bi bi-key text-muted"></i></span>
+                        <input type="password" class="form-control form-control-lg border-2 border-start-0 ps-0"
+                            id="password" name="password" required
+                            style="font-size: 1rem; border-radius: 0 0.75rem 0.75rem 0;">
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <div
+                        class="form-check form-switch custom-switch p-3 bg-light rounded-4 border d-flex align-items-center justify-content-between">
+                        <div>
+                            <label class="form-check-label fw-bold mb-0 ms-2 cursor-pointer" for="is_staff">System Staff
+                                Access</label>
+                            <div class="small text-muted ms-2" style="font-size: 0.7rem;">Grant administrative
+                                permissions</div>
+                        </div>
+                        <input class="form-check-input ms-0" type="checkbox" role="switch" id="is_staff" name="is_staff"
+                            style="width: 3rem; height: 1.5rem;">
+                    </div>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-primary py-3 fw-700 shadow-sm" style="border-radius: 0.8rem;">
+                        <i class="bi bi-shield-check me-2"></i> Create System Account
+                    </button>
+                    <a href="{% url 'home' %}" class="btn btn-light py-2 text-muted fw-600"
+                        style="border-radius: 0.8rem;">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<style>
+    .fw-600 {
+        font-weight: 600;
+    }
+
+    .fw-700 {
+        font-weight: 700;
+    }
+
+    .tracking-wider {
+        letter-spacing: 0.05em;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .input-group-text {
+        border-color: #dee2e6;
+    }
+
+    .form-control:focus+.input-group-text {
+        border-color: var(--primary-color);
+    }
+</style>
 {% endblock %}
