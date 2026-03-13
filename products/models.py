@@ -17,3 +17,11 @@ class ProductPSD(models.Model):
 
     def __str__(self):
         return f"PSD for {self.product.name}"
+
+class MockupResult(models.Model):
+    product = models.ForeignKey(Product, related_name='mockup_results', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='mockups/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Mockup for {self.product.name} ({self.id})"

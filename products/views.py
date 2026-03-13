@@ -11,7 +11,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import Product, ProductPSD
+from .models import Product, ProductPSD, MockupResult
+from django.core.files.base import ContentFile
 from .serializers import ProductSerializer
 from rest_framework import generics
 class ProductListAPI(generics.ListAPIView):
@@ -196,8 +197,18 @@ class GenerateMockupAPI(APIView):
                 final_image.save(response_io, format='PNG')
                 img_data = response_io.getvalue()
                 
-                base64_img = base64.b64encode(img_data).decode('utf-8')
-                previews.append(f"data:image/png;base64,{base64_img}")
+                # Save to database
+                import time
+                filename = f"mockup_{product.id}_{product_psd.id}_{int(time.time())}.png"
+                mockup_obj = MockupResult.objects.create(
+                    product=product,
+                    image=ContentFile(img_data, name=filename)
+                )
+                
+                # Get the absolute URL
+                request_obj = request._request if hasattr(request, '_request') else request
+                preview_url = request_obj.build_absolute_uri(mockup_obj.image.url)
+                previews.append(preview_url)
             
             return Response({
                 "success": True,
