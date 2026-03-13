@@ -1,0 +1,12 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # API endpoints
+    path('api/products/', views.ProductListAPI.as_view(), name='api_product_list'),
+    path('api/products/<int:pk>/', views.ProductDetailAPI.as_view(), name='api_product_detail'),
+
+    # Web endpoints
+    path('upload/', views.upload_product, name='upload_product'),
+    path('list/', views.product_list, name='product_list'),
+]

@@ -1,0 +1,53 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Products List - Admin Panel{% endblock %}
+{% block header %}Products Inventory{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="card-title mb-0">Products List</h5>
+            <a href="{% url 'upload_product' %}" class="btn btn-primary">Add New Product</a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Thumbnail</th>
+                        <th>Product info</th>
+                        <th>PSDs</th>
+                        <th>Created</th>
+                        <th>API Links</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td style="width: 100px;">
+                            <img src="{{ product.thumbnail.url }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ product.name }}</div>
+                            <div class="text-muted small text-truncate" style="max-width: 300px;">{{ product.description }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ product.psd_files.count }} Files</span>
+                        </td>
+                        <td class="small">{{ product.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'api_product_detail' product.id %}" target="_blank" class="btn btn-sm btn-outline-primary">View API</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No products uploaded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
