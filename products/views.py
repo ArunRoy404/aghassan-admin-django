@@ -21,6 +21,14 @@ def upload_product(request):
         description = request.POST.get('description')
         thumbnail = request.FILES.get('thumbnail')
         psd_files = request.FILES.getlist('psd_files')
+        
+        # Get the JSON data from client-side processing
+        import json
+        psd_data_raw = request.POST.get('psd_data', '[]')
+        try:
+            psd_data = json.loads(psd_data_raw)
+        except json.JSONDecodeError:
+            psd_data = []
 
         # Create product
         product = Product.objects.create(
@@ -29,9 +37,17 @@ def upload_product(request):
             thumbnail=thumbnail
         )
 
-        # Create PSD entries
-        for psd in psd_files:
-            ProductPSD.objects.create(product=product, psd_file=psd)
+        # Create PSD entries (matching by index)
+        for i, psd in enumerate(psd_files):
+            structure = None
+            if i < len(psd_data):
+                structure = psd_data[i].get('structure')
+            
+            ProductPSD.objects.create(
+                product=product, 
+                psd_file=psd,
+                structure_json=structure
+            )
 
         return redirect('product_list')
 
