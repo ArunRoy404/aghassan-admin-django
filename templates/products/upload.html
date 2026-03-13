@@ -76,14 +76,20 @@
 
             try {
                 const buffer = await file.arrayBuffer();
-                // ag-psd exports to global 'agPsd' in bundle
                 const psd = agPsd.readPsd(buffer);
                 
-                // Clean up the object to remove non-serializable parts if any
-                // (ag-psd structure is generally serializable)
+                // Copy the full structure
+                const optimizedPsd = { ...psd };
+                
+                // Remove the parts that are huge and not needed
+                delete optimizedPsd.imageResources;
+                delete optimizedPsd.linkedFiles;
+                
+                // Note: The 'children' array is preserved exactly as is relative to ag-psd's output
+                
                 results.push({
                     filename: file.name,
-                    structure: psd
+                    structure: optimizedPsd
                 });
             } catch (err) {
                 console.error(`Error processing ${file.name}:`, err);
