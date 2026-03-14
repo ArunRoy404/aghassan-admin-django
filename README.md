@@ -1,66 +1,90 @@
 # 🎁 Gift-khana Customization Tool Server
 
-Welcome to the backend server for **Gift-khana**! This server manages user accounts and handles the storage and retrieval of customizable products, including their high-resolution PSD assets.
+Welcome to the backend server for **Gift-khana**! This Django-based server manages user accounts and runs the core image processing engine handling high-resolution PSD assets for customizable products.
 
 ---
 
-## 🛠️ Quick Start (For Beginners)
+## 🛠️ Quick Start Guide
 
-If you are running this for the first time or restarting:
+Follow these steps to get the server running on your local machine:
 
-1.  **Open Command Prompt** in this folder.
-2.  **Execute the Setup Commands** sequentially based on your needs:
+1. **Create Virtual Environment** (First time only):
+   ```bash
+   python -m venv venv
+   ```
+2. **Activate Virtual Environment**:
+   ```bash
+   venv\Scripts\activate
+   ```
+3. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Apply Database Migrations**:
+   ```bash
+   python manage.py migrate
+   ```
+5. **Start Developer Server**:
+   ```bash
+   python manage.py runserver
+   ```
 
-| Task | Command | Description |
-| :--- | :--- | :--- |
-| **Create Folder** | `python -m venv venv` | Creates an isolated virtual environment (Initial setup only). |
-| **Turn On** | `venv\Scripts\activate` | Activates the virtual environment (Must be run every time). |
-| **Install Reqs** | `pip install -r requirements.txt` | Installs all required backend dependencies including OpenCV and numpy. |
-| **Sync DB** | `python manage.py migrate` | Synchronizes the SQLite database with the current schema. |
-| **New Admin** | `python manage.py createsuperuser` | Creates a new administrator/staff account. |
-| **Go Live** | `python manage.py runserver` | Starts the local development server. |
-
-3.  **Access the Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+**Access the Admin Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 ---
 
-## 🔐 Login Credentials (Admin)
+## 🔐 Default Credentials
+
 - **Username**: `admin`
 - **Password**: `adminpassword`
 
 ---
 
-## 📦 Features & Usage
+## 🚀 Key Features
 
-### 1. User Management
-- **Dashboard Home**: View all registered users and their staff status.
-- **Manage Permissions**: Admins can toggle "Staff" status or delete users.
-- **Add User**: Create new team members or admins.
+### 👥 User & Access Management
+- **Role-Based Access**: Differentiate between `Superusers` and `Staff` members.
+- **Member Dashboard**: View, add, or toggle staff status for system users.
 
-### 2. Product Management (Store Section)
-- **Products Inventory**: View all gift items currently in the system.
-- **Upload Product**: 
-    - Add product name, description, and a thumbnail.
-    - **PSD Support**: Specifically designed for Gift-khana, you can upload **multiple .psd files** for a single product (used for the customization tool).
-- **Delete Product**: Quick and simple UI action in the Products Inventory to completely remove products and their associated PSD files.
-
----
-
-## 🔌 API Endpoints
-Integration for the Gift-khana frontend:
-
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/products/api/products/` | `GET` | List all products with their thumbnails and PSD info. |
-| `/products/api/products/<id>/` | `GET` | Get full details for a single product. |
-| `/products/api/products/<id>/mockup/` | `POST` | Generates a warped mockup image mapped mathematically over the PSD template layer structure using an uploaded user `image` buffer. |
+### 📦 Product Inventory
+- **Smart Catalog**: Manage all your customizable gift items in one place.
+- **Bulk Actions**: Select multiple products to delete them simultaneously. 
+- **Advanced PSD Uploader**: 
+  - Upload `Preview PSDs` for general product visualization.
+  - Upload named `Mockup Sections` (e.g., *front_side*, *back_side*) for mapped customization.
+  - Automatically extracts and saves web-friendly thumbnails (transparent backgrounds without wrap distortions).
 
 ---
 
-## 🚀 Deployment & Backup
-- **Dependencies**: All required packages are in `requirements.txt`.
-- **Git**: A `.gitignore` is included to keep the server clean and secure.
-- **Database**: Uses SQLite (`db.sqlite3`) for simple, zero-config portablity.
+## 🔌 API Endpoints (Integration)
+
+The backend provides a robust and structured RESTful API for the frontend portal:
+
+### 🛍️ Products
+- `GET /products/api/products/`
+  - Retrieves a list of all products, including their base thumbnails and basic details.
+- `GET /products/api/products/<id>/`
+  - Retrieves full configuration details for a single product.
+  - **Includes the `mockup` array**, returning `width`/`height` (aspect ratios calculated exactly from internal smart objects) and the clean absolute `thumbnail` URLs for each customizable section.
+
+### 🎨 Image Generation Engine
+- `POST /products/api/products/<id>/preview/`
+  - Body: `image` (File)
+  - Evaluates user uploaded images mathematically across **all** preview-type PSD templates.
+  - Returns: An array of fully composited preview image URLs for the requested product. 
+
+- `POST /products/api/products/<id>/mockup/`
+  - Body: `image` (File), `id` (Mockup Section ID)
+  - Renders a specifically selected mockup side using the precision mesh-warping engine. 
+  - Perfect for updating the exact element a user is tweaking in real-time.
+
+---
+
+## 🖥️ Tech Stack
+
+- **Framework**: Django & Django REST Framework
+- **Image Processing**: OpenCV (cv2), numpy, Pillow (PIL), psd-tools
+- **Database**: SQLite3 (Portable `db.sqlite3`)
 
 ---
 
