@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 
 def is_admin(user):
-    return user.is_superuser
+    return user.is_superuser or user.is_staff
 
 @login_required
 def home(request):

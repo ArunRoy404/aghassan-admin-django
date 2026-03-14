@@ -277,3 +277,11 @@ def delete_product(request, pk):
         product = get_object_or_404(Product, pk=pk)
         product.delete()
     return redirect('product_list')
+
+@login_required
+def delete_multiple_products(request):
+    if request.method == 'POST':
+        product_ids = request.POST.getlist('product_ids')
+        if product_ids:
+            Product.objects.filter(id__in=product_ids).delete()
+    return redirect('product_list')
