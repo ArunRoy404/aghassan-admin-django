@@ -309,13 +309,47 @@ def upload_product(request):
                 structure = mockup_psd_data[i].get('structure')
             name_val = mockup_names[i] if i < len(mockup_names) else f'Section {i+1}'
             
-            ProductPSD.objects.create(
+            psd_obj_model = ProductPSD.objects.create(
                 product=product,
                 psd_file=psd,
                 structure_json=structure,
                 psd_type='mockup',
                 name=name_val
             )
+            
+            # Generate thumbnail without wrap layers
+            try:
+                psd_obj = PSDImage.open(psd_obj_model.psd_file.path)
+                canvas_w, canvas_h = psd_obj.width, psd_obj.height
+                thumbnail_image = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+                
+                def get_layer(p_obj, l_name):
+                    for l in p_obj:
+                        if l.name == l_name: return l.composite()
+                    return None
+
+                layers_data = structure.get('children', []) if structure else []
+                for layer_data in layers_data:
+                    if 'placedLayer' not in layer_data:
+                        l_name = layer_data.get('name', 'Unknown')
+                        layer_comp = get_layer(psd_obj, l_name)
+                        if layer_comp:
+                            layer_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0,0,0,0))
+                            left = layer_data.get('left', 0)
+                            top = layer_data.get('top', 0)
+                            layer_canvas.paste(layer_comp, (left, top))
+                            thumbnail_image.alpha_composite(layer_canvas)
+                
+                from io import BytesIO
+                from django.core.files.base import ContentFile
+                import time
+                response_io = BytesIO()
+                thumbnail_image.save(response_io, format='PNG')
+                filename = f"thumb_mockup_{product.id}_{psd_obj_model.id}_{int(time.time())}.png"
+                psd_obj_model.image_without_warp.save(filename, ContentFile(response_io.getvalue()))
+                
+            except Exception as e:
+                print("Failed to generate thumbnail for mockup:", str(e))
 
         return redirect('product_list')
 

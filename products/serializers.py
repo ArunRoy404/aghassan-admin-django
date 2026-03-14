@@ -30,10 +30,19 @@ class ProductSerializer(serializers.ModelSerializer):
                 if width == 0 and height == 0:
                     width = m.structure_json.get('width', 0)
                     height = m.structure_json.get('height', 0)
+            thumbnail_url = None
+            if m.image_without_warp:
+                request = self.context.get('request')
+                if request:
+                    thumbnail_url = request.build_absolute_uri(m.image_without_warp.url)
+                else:
+                    thumbnail_url = m.image_without_warp.url
+
             res.append({
                 'id': m.id,
                 'name': m.name,
                 'width': width,
-                'height': height
+                'height': height,
+                'thumbnail': thumbnail_url
             })
         return res
