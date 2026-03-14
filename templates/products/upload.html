@@ -58,20 +58,27 @@
                     </div>
                 </div>
 
-                <div class="psd-section mt-2">
+                <div class="psd-section mt-2 border-top pt-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">PSD Source Files</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="add-psd-btn">
-                            <i class="bi bi-plus-lg me-1"></i> Add Another Slot
+                        <h6 class="fw-bold mb-0">Preview PSDs Section</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="add-preview-btn">
+                            <i class="bi bi-plus-lg me-1"></i> Add Preview PSD
                         </button>
                     </div>
-
-                    <div id="psd-slots-container">
-                        <!-- Slots will be added dynamically -->
-                    </div>
+                    <div id="preview-slots-container"></div>
+                    <input type="hidden" name="preview_psd_data" id="preview_psd_data">
                 </div>
 
-                <input type="hidden" name="psd_data" id="psd_data">
+                <div class="psd-section mt-4 border-top pt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Mockup Sections</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="add-mockup-btn">
+                            <i class="bi bi-plus-lg me-1"></i> Add Mockup Section
+                        </button>
+                    </div>
+                    <div id="mockup-slots-container"></div>
+                    <input type="hidden" name="mockup_psd_data" id="mockup_psd_data">
+                </div>
 
                 <div class="pt-4 border-top mt-5 d-flex gap-3">
                     <button type="submit" class="btn btn-primary px-5 py-2 fw-700" id="submit-btn"
@@ -89,9 +96,14 @@
 <script src="{% static 'js/vendor/ag-psd.bundle.js' %}"></script>
 
 <script>
-    const psdSlotsContainer = document.getElementById('psd-slots-container');
-    const addPsdBtn = document.getElementById('add-psd-btn');
-    const psdDataInput = document.getElementById('psd_data');
+    const previewSlotsContainer = document.getElementById('preview-slots-container');
+    const addPreviewBtn = document.getElementById('add-preview-btn');
+    const previewDataInput = document.getElementById('preview_psd_data');
+    
+    const mockupSlotsContainer = document.getElementById('mockup-slots-container');
+    const addMockupBtn = document.getElementById('add-mockup-btn');
+    const mockupDataInput = document.getElementById('mockup_psd_data');
+
     const submitBtn = document.getElementById('submit-btn');
     const thumbInput = document.getElementById('thumbnail');
     const thumbPreview = document.getElementById('thumb-preview');
@@ -114,7 +126,7 @@
     // PSD Logic
     const psdStructures = {};
 
-    function createPsdSlot() {
+    function createPsdSlot(type, container) {
         const slotId = 'slot-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const slot = document.createElement('div');
         slot.className = 'psd-slot card mb-3 border-0 bg-light-soft';
@@ -122,13 +134,17 @@
         slot.style.background = '#fefefe';
         slot.style.border = '1px solid #e2e8f0 !important';
         slot.style.borderRadius = '1rem';
+        
+        const isMockup = type === 'mockup';
+        const fileInputName = isMockup ? 'mockup_psd_files' : 'preview_psd_files';
+        const nameInputHtml = isMockup ? `<input type="text" class="form-control form-control-sm mb-2" name="mockup_names" placeholder="Section Name (e.g., front_side)" required>` : '';
 
         slot.innerHTML = `
             <div class="card-body p-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="slot-number-badge">{{ forloop.counter }}</div>
                     <div class="flex-grow-1">
-                        <input type="file" class="form-control psd-file-input border-0 bg-transparent fw-500" name="psd_files" accept=".psd" required>
+                        ${nameInputHtml}
+                        <input type="file" class="form-control psd-file-input border-0 bg-transparent fw-500" name="${fileInputName}" accept=".psd" required>
                         <div class="status-info d-flex align-items-center gap-2 mt-1">
                              <div class="small text-muted status-text" style="font-size: 0.75rem;">Waiting for file...</div>
                         </div>
@@ -191,34 +207,50 @@
             }, 200);
         });
 
-        psdSlotsContainer.appendChild(slot);
+        container.appendChild(slot);
         return slot;
     }
 
     function syncPsdData() {
-        const results = [];
-        const slots = psdSlotsContainer.querySelectorAll('.psd-slot');
-        slots.forEach(slot => {
-            const id = slot.id;
-            const structure = psdStructures[id] || null;
-            results.push({ structure: structure });
+        const pResults = [];
+        previewSlotsContainer.querySelectorAll('.psd-slot').forEach(slot => {
+            pResults.push({ structure: psdStructures[slot.id] || null });
         });
-        psdDataInput.value = JSON.stringify(results);
+        previewDataInput.value = JSON.stringify(pResults);
+        
+        const mResults = [];
+        mockupSlotsContainer.querySelectorAll('.psd-slot').forEach(slot => {
+            mResults.push({ structure: psdStructures[slot.id] || null });
+        });
+        mockupDataInput.value = JSON.stringify(mResults);
     }
 
     function updateSubmitButton() {
-        const slots = psdSlotsContainer.querySelectorAll('.psd-slot');
-        let allProcessed = slots.length > 0;
-        slots.forEach(slot => {
-            if (!psdStructures[slot.id]) allProcessed = false;
+        const previewSlots = previewSlotsContainer.querySelectorAll('.psd-slot');
+        const mockupSlots = mockupSlotsContainer.querySelectorAll('.psd-slot');
+        
+        let isValid = previewSlots.length > 0 && mockupSlots.length > 0;
+        
+        [...previewSlots, ...mockupSlots].forEach(slot => {
+            if (!psdStructures[slot.id]) isValid = false;
         });
-        submitBtn.disabled = !allProcessed;
+        
+        submitBtn.disabled = !isValid;
     }
 
-    addPsdBtn.addEventListener('click', () => createPsdSlot());
+    addPreviewBtn.addEventListener('click', () => {
+        createPsdSlot('preview', previewSlotsContainer);
+        updateSubmitButton();
+    });
+    
+    addMockupBtn.addEventListener('click', () => {
+        createPsdSlot('mockup', mockupSlotsContainer);
+        updateSubmitButton();
+    });
 
     // Initialize
-    createPsdSlot();
+    createPsdSlot('preview', previewSlotsContainer);
+    createPsdSlot('mockup', mockupSlotsContainer);
     updateSubmitButton();
 </script>
 

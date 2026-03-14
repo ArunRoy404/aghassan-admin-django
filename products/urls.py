@@ -5,6 +5,7 @@ urlpatterns = [
     # API endpoints
     path('api/products/', views.ProductListAPI.as_view(), name='api_product_list'),
     path('api/products/<int:pk>/', views.ProductDetailAPI.as_view(), name='api_product_detail'),
+    path('api/products/<int:pk>/preview/', views.GeneratePreviewAPI.as_view(), name='api_generate_preview'),
     path('api/products/<int:pk>/mockup/', views.GenerateMockupAPI.as_view(), name='api_generate_mockup'),
 
     # Web endpoints

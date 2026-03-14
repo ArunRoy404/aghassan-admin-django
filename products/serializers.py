@@ -7,6 +7,25 @@ class ProductPSDLeanSerializer(serializers.ModelSerializer):
         fields = ['id', 'psd_file', 'uploaded_at']
 
 class ProductSerializer(serializers.ModelSerializer):
+    mockup = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'thumbnail', 'created_at']
+        fields = ['id', 'name', 'description', 'thumbnail', 'created_at', 'mockup']
+
+    def get_mockup(self, obj):
+        mockups = obj.psd_files.filter(psd_type='mockup')
+        res = []
+        for m in mockups:
+            width = 0
+            height = 0
+            if m.structure_json:
+                width = m.structure_json.get('width', 0)
+                height = m.structure_json.get('height', 0)
+            res.append({
+                'id': m.id,
+                'name': m.name,
+                'width': width,
+                'height': height
+            })
+        return res

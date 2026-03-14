@@ -43,7 +43,7 @@ class ProductDetailAPI(generics.RetrieveAPIView):
             "data": response.data
         })
 
-class GenerateMockupAPI(APIView):
+class BaseMockupAPI(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def bezier_calc(self, u, v, h_pts, v_pts):
@@ -135,33 +135,9 @@ class GenerateMockupAPI(APIView):
                 "status": 400
             }, status=400)
             
-        product_psds = product.psd_files.all()
-        if not product_psds.exists():
-            return Response({
-                "success": False,
-                "message": "PSD missing",
-                "error": "No PSD files attached to this product",
-                "status": 400
-            }, status=400)
-            
-        img_array = np.frombuffer(image_file.read(), np.uint8)
-        img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
-        if img is None:
-            return Response({
-                "success": False,
-                "message": "Invalid image",
-                "error": "The provided image format is not supported or corrupted",
-                "status": 400
-            }, status=400)
-            
-        if len(img.shape) > 2 and img.shape[2] == 3:
-            user_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
-        elif len(img.shape) > 2 and img.shape[2] == 4:
-            user_img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
-        else:
-            user_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGBA)
-            
+    def process_psds(self, request, product, product_psds, user_img):
         previews = []
+
         try:
             for product_psd in product_psds:
                 psd_path = product_psd.psd_file.path
@@ -225,6 +201,61 @@ class GenerateMockupAPI(APIView):
                 "error": str(e),
                 "status": 500
             }, status=500)
+class GeneratePreviewAPI(BaseMockupAPI):
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({"success": False, "message": "No image provided", "status": 400}, status=400)
+            
+        product_psds = product.psd_files.filter(psd_type='preview')
+        if not product_psds.exists():
+            return Response({"success": False, "message": "No preview PSDs attached to this product", "status": 400}, status=400)
+            
+        img_array = np.frombuffer(image_file.read(), np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            return Response({"success": False, "message": "Invalid image", "status": 400}, status=400)
+            
+        if len(img.shape) > 2 and img.shape[2] == 3:
+            user_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
+        elif len(img.shape) > 2 and img.shape[2] == 4:
+            user_img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+        else:
+            user_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGBA)
+            
+        return self.process_psds(request, product, product_psds, user_img)
+
+class GenerateMockupAPI(BaseMockupAPI):
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        
+        mockup_id = request.POST.get('id')
+        if not mockup_id:
+            return Response({"success": False, "message": "No mockup id provided", "status": 400}, status=400)
+            
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({"success": False, "message": "No image provided", "status": 400}, status=400)
+            
+        product_psds = product.psd_files.filter(id=mockup_id, psd_type='mockup')
+        if not product_psds.exists():
+            return Response({"success": False, "message": "Selected mockup section not found", "status": 400}, status=400)
+            
+        img_array = np.frombuffer(image_file.read(), np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            return Response({"success": False, "message": "Invalid image", "status": 400}, status=400)
+            
+        if len(img.shape) > 2 and img.shape[2] == 3:
+            user_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGBA)
+        elif len(img.shape) > 2 and img.shape[2] == 4:
+            user_img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+        else:
+            user_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGBA)
+            
+        return self.process_psds(request, product, product_psds, user_img)
 
 # Web Views
 @login_required
@@ -233,15 +264,23 @@ def upload_product(request):
         name = request.POST.get('name')
         description = request.POST.get('description')
         thumbnail = request.FILES.get('thumbnail')
-        psd_files = request.FILES.getlist('psd_files')
+        preview_psd_files = request.FILES.getlist('preview_psd_files')
+        mockup_psd_files = request.FILES.getlist('mockup_psd_files')
+        mockup_names = request.POST.getlist('mockup_names')
         
-        # Get the JSON data from client-side processing
         import json
-        psd_data_raw = request.POST.get('psd_data', '[]')
+        preview_psd_data_raw = request.POST.get('preview_psd_data', '[]')
+        mockup_psd_data_raw = request.POST.get('mockup_psd_data', '[]')
+        
         try:
-            psd_data = json.loads(psd_data_raw)
+            preview_psd_data = json.loads(preview_psd_data_raw)
         except json.JSONDecodeError:
-            psd_data = []
+            preview_psd_data = []
+            
+        try:
+            mockup_psd_data = json.loads(mockup_psd_data_raw)
+        except json.JSONDecodeError:
+            mockup_psd_data = []
 
         # Create product
         product = Product.objects.create(
@@ -250,16 +289,32 @@ def upload_product(request):
             thumbnail=thumbnail
         )
 
-        # Create PSD entries (matching by index)
-        for i, psd in enumerate(psd_files):
+        # Create Preview PSD entries
+        for i, psd in enumerate(preview_psd_files):
             structure = None
-            if i < len(psd_data):
-                structure = psd_data[i].get('structure')
+            if i < len(preview_psd_data):
+                structure = preview_psd_data[i].get('structure')
             
             ProductPSD.objects.create(
                 product=product, 
                 psd_file=psd,
-                structure_json=structure
+                structure_json=structure,
+                psd_type='preview'
+            )
+            
+        # Create Mockup PSD entries
+        for i, psd in enumerate(mockup_psd_files):
+            structure = None
+            if i < len(mockup_psd_data):
+                structure = mockup_psd_data[i].get('structure')
+            name_val = mockup_names[i] if i < len(mockup_names) else f'Section {i+1}'
+            
+            ProductPSD.objects.create(
+                product=product,
+                psd_file=psd,
+                structure_json=structure,
+                psd_type='mockup',
+                name=name_val
             )
 
         return redirect('product_list')

@@ -13,6 +13,8 @@ class ProductPSD(models.Model):
     product = models.ForeignKey(Product, related_name='psd_files', on_delete=models.CASCADE)
     psd_file = models.FileField(upload_to='psds/')
     structure_json = models.JSONField(null=True, blank=True)
+    psd_type = models.CharField(max_length=20, choices=[('preview', 'Preview'), ('mockup', 'Mockup')], default='preview')
+    name = models.CharField(max_length=100, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
