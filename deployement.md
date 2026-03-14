@@ -102,6 +102,14 @@ Django needs to copy all admin panel styles and your styles into one central fol
 python manage.py collectstatic --noinput
 ```
 
+### 7. Fix File Permissions (IMPORTANT!)
+Since you are logged into the terminal as `root`, all these files (including the database you just built) are currently owned by `root`. But our background service will run under the user `softvencealpha-aghasan`. It will crash trying to log you in if it can't write to the database!
+Run this command to give the app permission over its own folder:
+```bash
+chown -R softvencealpha-aghasan:softvencealpha-aghasan /home/softvencealpha-aghasan/htdocs/aghasan.softvencealpha.com/
+chmod -R 755 /home/softvencealpha-aghasan/htdocs/aghasan.softvencealpha.com/staticfiles
+```
+
 ---
 
 ## 🔄 Phase 4: Keeping the Server On 24/7
@@ -153,27 +161,59 @@ Your Python app is running perfectly in the dark. Now we must tell CloudPanel's 
 1. Open your **CloudPanel Web Dashboard** via browser (`https://cp.softvencealpha.com/`).
 2. Go to **Sites** -> Click on `aghasan.softvencealpha.com`.
 3. Click the **Vhost** tab at the top.
-4. Scroll exactly to the section that looks like `location / { ... }`.
-5. **REPLACE** that entire `location /` section with this exact code:
+4. You will see a large block of code starting with `server { ... }`.
+5. **REPLACE your ENTIRE configuration** with this exact code:
 
 ```nginx
-# This tells Cloudpanel where the CSS/JS files are
-location /static/ {
+server {
+  listen 80;
+  listen [::]:80;
+  listen 443 quic;
+  listen 443 ssl;
+  listen [::]:443 quic;
+  listen [::]:443 ssl;
+  http2 on;
+  http3 off;
+  {{ssl_certificate_key}}
+  {{ssl_certificate}}
+  server_name aghasan.softvencealpha.com;
+  {{root}}
+
+  {{nginx_access_log}}
+  {{nginx_error_log}}
+
+  if ($scheme != "https") {
+    rewrite ^ https://$host$request_uri permanent;
+  }
+  
+  # Django Static Files
+  location ^~ /static/ {
     alias /home/softvencealpha-aghasan/htdocs/aghasan.softvencealpha.com/staticfiles/;
-}
+  }
 
-# This tells Cloudpanel where user-uploaded PSDs/Images are saved
-location /media/ {
+  # Django Media Files (Uploads)
+  location ^~ /media/ {
     alias /home/softvencealpha-aghasan/htdocs/aghasan.softvencealpha.com/media/;
-}
+  }
 
-# This sends all normal website clicks back to your Python App
-location / {
+  location ~ /.well-known {
+    auth_basic off;
+    allow all;
+  }
+
+  {{settings}}
+
+  include /etc/nginx/global_settings;
+
+  # This connects Nginx to your Gunicorn running on port 8000
+  location / {
     proxy_pass http://127.0.0.1:8000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 900;
+  }
 }
 ```
 
