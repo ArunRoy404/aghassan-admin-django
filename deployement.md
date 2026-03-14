@@ -38,12 +38,23 @@ CloudPanel created a specific folder for your domain. Go there now:
 cd /home/softvencealpha-aghasan/htdocs/aghasan.softvencealpha.com/
 ```
 
-### 2. Download Your Code from GitHub
-If this folder is empty, you will clone your repository. If it already has code, you will pull the latest updates. I assume it is empty for the first time:
+### 2. Download Your Code from GitHub safely
+CloudPanel creates a hidden `.well-known` folder for SSL, meaning the folder is NOT empty. Because of this, a simple `git clone` will fail. 
+
+To download your code perfectly and keep your SSL folder 100% safe, run these commands:
+
 ```bash
-# Don't forget the dot (.) at the end of the line! It tells git to download files into this exact folder.
-git clone <YOUR_GITHUB_REPOSITORY_URL_HERE> .
+# This creates a temporary folder and clones your code into it
+git clone https://github.com/ArunRoy404/aghassan-admin-django.git temp
+
+# This copies ALL the files (including hidden ones) from temp to your current folder
+cp -r temp/. .
+
+# This deletes the empty temporary folder
+rm -rf temp
 ```
+
+*This method is completely bulletproof. It won't touch, delete, or hide your SSL `.well-known` folder.*
 
 ---
 
@@ -68,6 +79,7 @@ source venv/bin/activate
 This reads the `requirements.txt` I made and downloads everything. It will also install `gunicorn`, which is the strong engine that runs Django in the real world (unlike the weak `runserver` you use on Windows).
 ```bash
 pip install -r requirements.txt
+pip install djangorestframework django-cors-headers
 pip install gunicorn
 ```
 
@@ -102,7 +114,7 @@ nano /etc/systemd/system/aghasan.service
 ```
 
 ### 2. Copy & Paste this Configuration:
-*Don't change anything, just paste this straight in.*
+*Don't change anything, just paste this straight in. Right-clicking in the SSH terminal usually pastes.*
 ```ini
 [Unit]
 Description=Gunicorn process for Aghasan Django
