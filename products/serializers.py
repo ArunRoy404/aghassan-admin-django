@@ -20,8 +20,16 @@ class ProductSerializer(serializers.ModelSerializer):
             width = 0
             height = 0
             if m.structure_json:
-                width = m.structure_json.get('width', 0)
-                height = m.structure_json.get('height', 0)
+                children = m.structure_json.get('children', [])
+                for child in children:
+                    if 'placedLayer' in child:
+                        width = child['placedLayer'].get('width', 0)
+                        height = child['placedLayer'].get('height', 0)
+                        break
+                
+                if width == 0 and height == 0:
+                    width = m.structure_json.get('width', 0)
+                    height = m.structure_json.get('height', 0)
             res.append({
                 'id': m.id,
                 'name': m.name,
