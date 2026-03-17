@@ -29,8 +29,12 @@ ALLOWED_HOSTS = ['aghasan.softvencealpha.com', '159.198.77.123', 'localhost', '1
 
 # Production Security for Reverse Proxy (CloudPanel Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CSRF_TRUSTED_ORIGINS = ['https://aghasan.softvencealpha.com', 'http://aghasan.softvencealpha.com']
-
+CSRF_TRUSTED_ORIGINS = [
+    'https://aghasan.softvencealpha.com', 
+    'http://aghasan.softvencealpha.com',
+    'https://gift-khana.vercel.app',
+    'http://localhost:3000',
+]
 
 # Application definition
 
@@ -137,7 +141,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True  # For development
+# Specifically allow your frontend environments
+CORS_ALLOWED_ORIGINS = [
+    "https://gift-khana.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
