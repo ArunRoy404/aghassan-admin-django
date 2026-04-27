@@ -136,56 +136,104 @@ class BaseMockupAPI(APIView):
             }, status=400)
             
     def process_psds(self, request, product, product_psds, user_img):
+        from io import BytesIO
+        import time
+
         previews = []
 
         try:
             for product_psd in product_psds:
+
                 psd_path = product_psd.psd_file.path
                 psd_json = product_psd.structure_json
-                
-                if not psd_json:
-                    continue # Skip if no JSON structure
-                    
-                psd_obj = PSDImage.open(psd_path)
-                canvas_w, canvas_h = psd_obj.width, psd_obj.height
-                final_image = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+                # 🔥 SAFE JSON CHECK
+                if not isinstance(psd_json, dict):
+                    continue
 
                 layers_data = psd_json.get('children', [])
-                
+                if not isinstance(layers_data, list):
+                    layers_data = []
+
+                psd_obj = PSDImage.open(psd_path)
+                canvas_w, canvas_h = psd_obj.width, psd_obj.height
+
+                final_image = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
+
+                # =========================
+                # RENDER LAYERS
+                # =========================
                 for layer_data in layers_data:
+
+                    if layer_data.get('hidden', False):
+                        continue
+
                     name = layer_data.get('name', 'Unknown')
-                    
+
+                    # 🔥 WARPED LAYER
                     if 'placedLayer' in layer_data:
-                        warped_arr = self.run_warp_math(canvas_w, canvas_h, layer_data, user_img)
+                        warped_arr = self.run_warp_math(
+                            canvas_w, canvas_h, layer_data, user_img
+                        )
+
                         warped_pil = Image.fromarray(warped_arr)
+
+                        # 🔥 SIZE SAFETY
+                        if warped_pil.size != (canvas_w, canvas_h):
+                            warped_pil = warped_pil.resize((canvas_w, canvas_h))
+
                         final_image.alpha_composite(warped_pil)
+
+                    # 🔥 NORMAL PSD LAYER
                     else:
                         psd_layer_img = self.get_psd_layer_by_name(psd_obj, name)
+
                         if psd_layer_img:
-                            layer_canvas = Image.new("RGBA", (canvas_w, canvas_h), (0,0,0,0))
+                            if psd_layer_img.mode != "RGBA":
+                                psd_layer_img = psd_layer_img.convert("RGBA")
+
+                            layer_canvas = Image.new(
+                                "RGBA", (canvas_w, canvas_h), (0, 0, 0, 0)
+                            )
+
                             left = layer_data.get('left', 0)
                             top = layer_data.get('top', 0)
-                            layer_canvas.paste(psd_layer_img, (left, top))
+
+                            mask = psd_layer_img.split()[3]
+
+                            layer_canvas.paste(
+                                psd_layer_img,
+                                (left, top),
+                                mask
+                            )
+
                             final_image.alpha_composite(layer_canvas)
-                
-                from io import BytesIO
+
+                # =========================
+                # SAVE IMAGE
+                # =========================
                 response_io = BytesIO()
                 final_image.save(response_io, format='PNG')
                 img_data = response_io.getvalue()
-                
-                # Save to database
-                import time
+
                 filename = f"mockup_{product.id}_{product_psd.id}_{int(time.time())}.png"
+
                 mockup_obj = MockupResult.objects.create(
                     product=product,
                     image=ContentFile(img_data, name=filename)
                 )
-                
-                # Get the absolute URL
-                request_obj = request._request if hasattr(request, '_request') else request
-                preview_url = request_obj.build_absolute_uri(mockup_obj.image.url)
+
+                # =========================
+                # SAFE URL GENERATION
+                # =========================
+                image_field = getattr(mockup_obj, "image", None)
+
+                preview_url = None
+                if request and image_field and getattr(image_field, "url", None):
+                    preview_url = request.build_absolute_uri(image_field.url)
+
                 previews.append(preview_url)
-            
+
             return Response({
                 "success": True,
                 "message": f"Successfully generated {len(previews)} mockup(s)",
@@ -193,7 +241,7 @@ class BaseMockupAPI(APIView):
                 "status": 200,
                 "preview": previews
             })
-            
+
         except Exception as e:
             return Response({
                 "success": False,
@@ -201,6 +249,7 @@ class BaseMockupAPI(APIView):
                 "error": str(e),
                 "status": 500
             }, status=500)
+        
 class GeneratePreviewAPI(BaseMockupAPI):
     def post(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
